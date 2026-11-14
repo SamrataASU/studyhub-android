@@ -116,7 +116,7 @@ private fun Header(state: UiState) {
     Column(Modifier.padding(top = 4.dp)) {
         Text(date, color = Palette.Violet, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
         val greeting = if (state.name.isBlank()) Fmt.greeting() else "${Fmt.greeting()}, ${state.name}"
-        Text(greeting, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp)
+        Text(greeting, color = Palette.Text, fontSize = 30.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp)
         Spacer(Modifier.height(4.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             when {
@@ -140,7 +140,7 @@ private fun Header(state: UiState) {
 private fun SetupCard(vm: MainViewModel) {
     var link by rememberSaveable { mutableStateOf("") }
     GlassCard {
-        Text("Connect your Canvas", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+        Text("Connect your Canvas", color = Palette.Text, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         Spacer(Modifier.height(6.dp))
         Text(
             "Paste your Canvas calendar link (Canvas → Calendar → “Calendar Feed”).",
@@ -216,7 +216,7 @@ private fun AllClearCard() {
             Icon(Icons.Filled.Verified, contentDescription = null, tint = Palette.Mint, modifier = Modifier.size(36.dp))
             Spacer(Modifier.width(14.dp))
             Column {
-                Text("All caught up", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("All caught up", color = Palette.Text, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 Text("No upcoming deadlines. A great time to review notes or read ahead.", color = Palette.Muted, fontSize = 13.sp)
             }
         }
@@ -236,12 +236,12 @@ private fun StatsRow(state: UiState, dueSoon: Int) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxSize()) {
                 Box(contentAlignment = Alignment.Center) {
                     ProgressRing(if (total == 0) 0f else done.toFloat() / total, 56.dp, 8.dp)
-                    Text("$done/$total", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("$done/$total", color = Palette.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text("This week", color = Palette.Muted, fontSize = 12.sp)
-                    Text(status, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                    Text(status, color = Palette.Text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
         }
@@ -281,7 +281,7 @@ private fun QuoteCard() {
         Row {
             Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Palette.Amber)
             Spacer(Modifier.width(12.dp))
-            Text(quote, color = Color.White, fontSize = 15.sp, fontStyle = FontStyle.Italic, fontFamily = FontFamily.Serif)
+            Text(quote, color = Palette.Text, fontSize = 15.sp, fontStyle = FontStyle.Italic, fontFamily = FontFamily.Serif)
         }
     }
 }
@@ -300,7 +300,7 @@ private fun CanvasUpdatesCard(state: UiState, onClear: () -> Unit) {
                 Spacer(Modifier.width(10.dp))
                 Column {
                     Text(change.headline, color = Palette.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text(change.detail, color = Color.White, fontSize = 14.sp)
+                    Text(change.detail, color = Palette.Text, fontSize = 14.sp)
                 }
             }
         }

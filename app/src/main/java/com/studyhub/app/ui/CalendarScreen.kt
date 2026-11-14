@@ -112,12 +112,12 @@ private fun MonthGrid(
     val weeks = cells.chunked(7)
 
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Text(title, color = Palette.Text, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
         IconButton(onClick = onPrev) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous month", tint = Palette.Text)
         }
         IconButton(onClick = onNext) {
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next month", tint = Palette.Text)
         }
     }
     Spacer(Modifier.height(6.dp))
@@ -163,7 +163,7 @@ private fun DayCell(day: LocalDate, isSelected: Boolean, items: List<StudyItem>,
             color = when {
                 isSelected -> Color.White
                 isToday -> Palette.Violet
-                else -> Color.White
+                else -> Palette.Text
             },
             fontSize = 15.sp,
             fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,

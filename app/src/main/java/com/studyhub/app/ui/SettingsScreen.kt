@@ -5,6 +5,17 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import com.studyhub.app.data.Store
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,7 +80,7 @@ fun SettingsScreen(state: UiState, vm: MainViewModel, onClose: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 6.dp),
         ) {
-            Text("Settings", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("Settings", color = Palette.Text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             TextButton(onClick = {
                 if (name.trim() != state.name) vm.setName(name)
                 onClose()
@@ -90,6 +101,19 @@ fun SettingsScreen(state: UiState, vm: MainViewModel, onClose: () -> Unit) {
                     label = { Text("Your name") },
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            Label("THEME")
+            GlassCard {
+                val ctx = LocalContext.current
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    ThemeChoice.entries.forEach { t ->
+                        ThemeSwatch(t, selected = Palette.theme == t) {
+                            Palette.theme = t
+                            Store.setTheme(ctx, t.name)
+                        }
+                    }
+                }
             }
 
             Label("CANVAS")
@@ -174,7 +198,7 @@ private fun StatusLine(icon: androidx.compose.ui.graphics.vector.ImageVector, co
 private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 15.sp)
+            Text(title, color = Palette.Text, fontSize = 15.sp)
             Text(subtitle, color = Palette.Muted, fontSize = 12.sp)
         }
         Switch(
@@ -194,10 +218,9 @@ fun rememberNotificationPermission(): () -> Unit {
     }
 }
 
-/** First launch: ask for a name and the Canvas link. */
+/** First launch: ask for the Canvas link (the name is asked in a pop-up). */
 @Composable
-fun OnboardingScreen(onDone: (String, String) -> Unit) {
-    var name by rememberSaveable { mutableStateOf("") }
+fun OnboardingScreen(onDone: (String) -> Unit) {
     var feed by rememberSaveable { mutableStateOf("") }
     val askNotifications = rememberNotificationPermission()
 
@@ -218,26 +241,14 @@ fun OnboardingScreen(onDone: (String, String) -> Unit) {
             modifier = Modifier.size(96.dp).clip(RoundedCornerShape(24.dp)),
         )
         Text("Welcome", color = Palette.Violet, fontSize = 13.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-        Text("All your class deadlines, in one place", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp)
+        Text("All your class deadlines, in one place", color = Palette.Text, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 34.sp)
         Text(
             "Countdowns, reminders, widgets and daily finance news, all from your Canvas calendar.",
             color = Palette.Muted, fontSize = 15.sp,
         )
 
         GlassCard {
-            Text("What should we call you?", color = Color.White, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                singleLine = true,
-                placeholder = { Text("Your first name") },
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        GlassCard {
-            Text("Your Canvas calendar link", color = Color.White, fontWeight = FontWeight.SemiBold)
+            Text("Your Canvas calendar link", color = Palette.Text, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(6.dp))
             Text(
                 "1. Open Canvas in a web browser and sign in.\n" +
@@ -259,10 +270,73 @@ fun OnboardingScreen(onDone: (String, String) -> Unit) {
         Button(
             onClick = {
                 askNotifications()
-                onDone(name, feed)
+                onDone(feed)
             },
             modifier = Modifier.fillMaxWidth().height(52.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Palette.Violet),
         ) { Text(if (feed.isBlank()) "Skip for now" else "Get started", fontSize = 16.sp, fontWeight = FontWeight.Bold) }
     }
+}
+
+/** A small preview circle for one theme. */
+@Composable
+private fun ThemeSwatch(theme: ThemeChoice, selected: Boolean, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(Brush.verticalGradient(listOf(theme.bgTop, theme.bgBottom)))
+                .border(if (selected) 3.dp else 1.dp, if (selected) theme.accent else Palette.Text.copy(alpha = 0.2f), CircleShape),
+        ) {
+            Box(Modifier.size(16.dp).clip(CircleShape).background(theme.accent))
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            theme.label,
+            color = if (selected) Palette.Text else Palette.Muted,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        )
+    }
+}
+
+/** First launch: "What's your first name?" */
+@Composable
+fun NameDialog(onAnswer: (String?) -> Unit) {
+    var name by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = { },
+        containerColor = Palette.Sheet,
+        title = { Text("Welcome to StudyHub", color = Palette.Text, fontWeight = FontWeight.Bold) },
+        text = {
+            Column {
+                Text("What's your first name?", color = Palette.Muted)
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    singleLine = true,
+                    placeholder = { Text("First name") },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onAnswer(name) }, enabled = name.isNotBlank()) {
+                Text("Continue", color = if (name.isNotBlank()) Palette.Violet else Palette.Muted, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onAnswer(null) }) { Text("Skip", color = Palette.Muted) }
+        },
+    )
 }

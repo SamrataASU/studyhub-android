@@ -11,6 +11,12 @@ object Store {
     fun name(c: Context): String = prefs(c).getString("name", "") ?: ""
     fun setName(c: Context, v: String) = prefs(c).edit().putString("name", v.trim()).apply()
 
+    fun askedName(c: Context): Boolean = prefs(c).getBoolean("askedName", false)
+    fun setAskedName(c: Context) = prefs(c).edit().putBoolean("askedName", true).apply()
+
+    fun theme(c: Context): String = prefs(c).getString("theme", "") ?: ""
+    fun setTheme(c: Context, v: String) = prefs(c).edit().putString("theme", v).apply()
+
     fun feed(c: Context): String = prefs(c).getString("feed", "") ?: ""
     fun setFeed(c: Context, v: String) = prefs(c).edit().putString("feed", v.trim()).apply()
 

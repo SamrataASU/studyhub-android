@@ -26,8 +26,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,17 +52,49 @@ import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
 
+/** The color themes people can pick in Settings. */
+enum class ThemeChoice(
+    val label: String,
+    val bgTop: Color,
+    val bgBottom: Color,
+    val accent: Color,
+    val bar: Color,
+    val sheet: Color,
+    val isLight: Boolean = false,
+) {
+    VIOLET("Violet", Color(0xFF0F0D24), Color(0xFF26144A), Color(0xFF8C6BFF), Color(0xFF15112E), Color(0xFF1C1638)),
+    MIDNIGHT("Midnight", Color(0xFF000000), Color(0xFF0F0F14), Color(0xFF4D9EFF), Color(0xFF0A0A0D), Color(0xFF141418)),
+    GRAPHITE("Graphite", Color(0xFF212126), Color(0xFF3D3D45), Color(0xFF8094B8), Color(0xFF1E1E22), Color(0xFF2A2A30)),
+    CRIMSON("Crimson", Color(0xFF1A0408), Color(0xFF470A17), Color(0xFFF24052), Color(0xFF16050A), Color(0xFF2A0A10)),
+    LIGHT("Light", Color(0xFFFAF8FF), Color(0xFFE6E3F5), Color(0xFF7352EB), Color(0xFFFFFFFF), Color(0xFFFFFFFF), isLight = true);
+
+    companion object {
+        fun from(name: String?) = entries.firstOrNull { it.name == name } ?: VIOLET
+    }
+}
+
 object Palette {
-    val BgTop = Color(0xFF0F0D24)
-    val BgBottom = Color(0xFF26144A)
-    val Violet = Color(0xFF8C6BFF)
+    /** The active theme. Changing it redraws the app. */
+    var theme by mutableStateOf(ThemeChoice.VIOLET)
+
+    val BgTop get() = theme.bgTop
+    val BgBottom get() = theme.bgBottom
+    /** The main accent color (violet in the default theme). */
+    val Violet get() = theme.accent
     val Coral = Color(0xFFFF6B78)
     val Amber = Color(0xFFFFBD4D)
     val Sky = Color(0xFF5CB8FF)
     val Mint = Color(0xFF5CE6B3)
-    val Card = Color.White.copy(alpha = 0.07f)
-    val Stroke = Color.White.copy(alpha = 0.08f)
-    val Muted = Color.White.copy(alpha = 0.6f)
+
+    private val ink get() = if (theme.isLight) Color(0xFF1A1530) else Color.White
+    /** Main text color. */
+    val Text get() = ink
+    val Card get() = if (theme.isLight) Color.White.copy(alpha = 0.75f) else Color.White.copy(alpha = 0.07f)
+    val Stroke get() = ink.copy(alpha = 0.08f)
+    val Muted get() = ink.copy(alpha = 0.6f)
+    val RowBg get() = ink.copy(alpha = 0.05f)
+    val Bar get() = theme.bar
+    val Sheet get() = theme.sheet
 }
 
 val ItemKind.icon: ImageVector
@@ -71,18 +106,28 @@ val ItemKind.icon: ImageVector
 
 @Composable
 fun AppTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = darkColorScheme(
+    val scheme = if (Palette.theme.isLight) {
+        lightColorScheme(
             primary = Palette.Violet,
             onPrimary = Color.White,
             secondary = Palette.Sky,
             background = Palette.BgTop,
-            surface = Color(0xFF1C1638),
+            surface = Palette.Sheet,
+            onSurface = Palette.Text,
+            onBackground = Palette.Text,
+        )
+    } else {
+        darkColorScheme(
+            primary = Palette.Violet,
+            onPrimary = Color.White,
+            secondary = Palette.Sky,
+            background = Palette.BgTop,
+            surface = Palette.Sheet,
             onSurface = Color.White,
             onBackground = Color.White,
-        ),
-        content = content,
-    )
+        )
+    }
+    MaterialTheme(colorScheme = scheme, content = content)
 }
 
 @Composable
@@ -117,7 +162,7 @@ fun ScreenHeader(title: String, onSettings: () -> Unit, actions: @Composable Row
             .padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.weight(1f))
+        Text(title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = Palette.Text, modifier = Modifier.weight(1f))
         actions()
         IconButton(onClick = onSettings) {
             Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = Palette.Violet)
@@ -128,17 +173,17 @@ fun ScreenHeader(title: String, onSettings: () -> Unit, actions: @Composable Row
 @Composable
 fun SectionHeader(title: String, count: Int? = null) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Palette.Text)
         if (count != null && count > 0) {
             Spacer(Modifier.width(8.dp))
             Text(
                 "$count",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = Palette.Text,
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.12f))
+                    .background(Palette.Text.copy(alpha = 0.12f))
                     .padding(horizontal = 8.dp, vertical = 2.dp),
             )
         }
@@ -180,7 +225,7 @@ fun DueBadge(due: Instant) {
         seconds < 0 -> Palette.Coral
         seconds < 86_400 -> Palette.Amber
         seconds < 3 * 86_400 -> Palette.Sky
-        else -> Color.White.copy(alpha = 0.6f)
+        else -> Palette.Muted
     }
     Text(
         Fmt.short(seconds),
@@ -200,7 +245,7 @@ fun ProgressRing(progress: Float, size: Dp, stroke: Dp, colors: List<Color> = li
         val w = stroke.toPx()
         val arcSize = Size(this.size.width - w, this.size.height - w)
         val topLeft = Offset(w / 2, w / 2)
-        drawArc(Color.White.copy(alpha = 0.1f), 0f, 360f, false, topLeft, arcSize, style = Stroke(w))
+        drawArc(Palette.Text.copy(alpha = 0.1f), 0f, 360f, false, topLeft, arcSize, style = Stroke(w))
         val sweep = 360f * progress.coerceIn(0f, 1f)
         if (sweep > 0f) {
             drawArc(

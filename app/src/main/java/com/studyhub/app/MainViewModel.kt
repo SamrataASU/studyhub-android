@@ -33,6 +33,7 @@ data class UiState(
     val dailyNews: Boolean = true,
     val changes: List<CanvasChange> = emptyList(),
     val changeAlerts: Boolean = true,
+    val askedName: Boolean = false,
 ) {
     val deadlines: List<StudyItem> get() = items.filter { it.tracksCompletion }
 
@@ -73,6 +74,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             items = inRange(Store.cachedItems(app)),
             done = Store.done(app),
             name = Store.name(app),
+            askedName = Store.askedName(app),
             feed = Store.feed(app),
             onboarded = Store.onboarded(app),
             reminders = Store.reminders(app),
@@ -112,12 +114,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { Widgets.updateAll(ctx) }
     }
 
-    fun finishOnboarding(name: String, feed: String) {
-        Store.setName(ctx, name)
+    fun finishOnboarding(feed: String) {
         Store.setFeed(ctx, feed)
         Store.setOnboarded(ctx)
-        _state.update { it.copy(name = name.trim(), feed = feed.trim(), onboarded = true) }
+        _state.update { it.copy(feed = feed.trim(), onboarded = true) }
         refresh()
+    }
+
+    /** Answer from the first-launch "What's your first name?" box. */
+    fun answerName(name: String?) {
+        if (!name.isNullOrBlank()) Store.setName(ctx, name)
+        Store.setAskedName(ctx)
+        _state.update { it.copy(name = if (name.isNullOrBlank()) it.name else name.trim(), askedName = true) }
     }
 
     fun setName(name: String) {

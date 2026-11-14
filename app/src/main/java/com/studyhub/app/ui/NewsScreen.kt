@@ -84,18 +84,22 @@ fun NewsScreen(onOpen: (WebPage) -> Unit, onSettings: () -> Unit) {
     var articles by remember { mutableStateOf<List<NewsArticle>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var updatedAt by remember { mutableStateOf<java.time.LocalTime?>(null) }
     val scope = rememberCoroutineScope()
 
     suspend fun load(t: NewsTopic) {
         loading = true
         try {
             val fresh = withContext(Dispatchers.IO) { News.fetch(t) }
-            if (t.name == topicName) articles = fresh
-            error = null
+            if (t.name == topicName) {
+                articles = fresh
+                updatedAt = java.time.LocalTime.now()
+                error = null
+            }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            error = "Check your internet connection, then pull down to try again."
+            if (t.name == topicName) error = "Check your internet connection, then pull down to try again."
         } finally {
             loading = false
         }
@@ -103,7 +107,13 @@ fun NewsScreen(onOpen: (WebPage) -> Unit, onSettings: () -> Unit) {
 
     LaunchedEffect(topicName) {
         articles = emptyList()
+        error = null
         load(topic)
+        // Quietly check for new headlines every 5 minutes while News is open.
+        while (true) {
+            kotlinx.coroutines.delay(5 * 60_000L)
+            load(topic)
+        }
     }
 
     val open: (NewsArticle) -> Unit = { onOpen(WebPage(it.title, it.source, it.link)) }
@@ -123,8 +133,13 @@ fun NewsScreen(onOpen: (WebPage) -> Unit, onSettings: () -> Unit) {
                 item {
                     Column(Modifier.padding(top = 4.dp)) {
                         Text("DAILY FINANCE BRIEFING", color = Palette.Violet, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
-                        Text("Today's headlines", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
-                        Text("Google News · last 24 hours", color = Palette.Muted, fontSize = 12.sp)
+                        Text("Latest headlines", color = Palette.Text, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            updatedAt?.let { "Google News · updated " + it.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")) }
+                                ?: "Google News · last few days",
+                            color = Palette.Muted,
+                            fontSize = 12.sp,
+                        )
                     }
                 }
                 item {
@@ -156,6 +171,8 @@ fun NewsScreen(onOpen: (WebPage) -> Unit, onSettings: () -> Unit) {
                 val err = error
                 if (err != null && articles.isEmpty() && !loading) {
                     item { EmptyState(Icons.Filled.WifiOff, "Couldn't load news", err) }
+                } else if (articles.isEmpty() && !loading && updatedAt != null) {
+                    item { EmptyState(Icons.Filled.WifiOff, "No fresh headlines", "Pull down to check again.") }
                 }
                 articles.firstOrNull()?.let { lead -> item(key = "lead-" + lead.id) { LeadStory(lead) { open(lead) } } }
                 items(articles.drop(1), key = { it.id }) { a -> NewsRow(a) { open(a) } }
@@ -191,7 +208,7 @@ private fun NewsRow(article: NewsArticle, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .background(Palette.RowBg)
             .clickable(onClick = onClick)
             .padding(14.dp),
     ) {
@@ -200,7 +217,7 @@ private fun NewsRow(article: NewsArticle, onClick: () -> Unit) {
             if (article.published != null) Text("  ·  ${Fmt.ago(article.published)}", color = Palette.Muted, fontSize = 12.sp)
         }
         Spacer(Modifier.height(4.dp))
-        Text(article.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+        Text(article.title, color = Palette.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -214,16 +231,16 @@ fun WebPageScreen(page: WebPage, onClose: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF15112E))
+                .background(Palette.Bar)
                 .statusBarsPadding()
                 .padding(end = 16.dp, top = 4.dp, bottom = 10.dp),
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Palette.Text)
             }
             Column(Modifier.weight(1f)) {
                 Text(page.source, color = Palette.Violet, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text(page.title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(page.title, color = Palette.Text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (loading) CircularProgressIndicator(color = Palette.Violet, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
         }

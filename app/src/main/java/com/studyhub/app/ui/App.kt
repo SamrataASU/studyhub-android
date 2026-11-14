@@ -100,6 +100,7 @@ fun StudyHubApp(vm: MainViewModel) {
     }
 
     AppTheme {
+        if (!state.askedName && state.name.isBlank()) NameDialog(onAnswer = vm::answerName)
         AppBackground {
             when {
                 !state.onboarded -> OnboardingScreen(onDone = vm::finishOnboarding)
@@ -115,7 +116,7 @@ fun StudyHubApp(vm: MainViewModel) {
                 else -> Scaffold(
                     containerColor = Color.Transparent,
                     bottomBar = {
-                        NavigationBar(containerColor = Color(0xFF15112E)) {
+                        NavigationBar(containerColor = Palette.Bar) {
                             tabs.forEachIndexed { i, t ->
                                 NavigationBarItem(
                                     selected = tab == i,
@@ -171,7 +172,7 @@ fun ItemRow(item: StudyItem, state: UiState, vm: MainViewModel, onOpen: (StudyIt
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .background(Palette.Text.copy(alpha = 0.05f))
             .clickable { onOpen(item) }
             .padding(horizontal = 8.dp, vertical = 8.dp),
     ) {
@@ -195,7 +196,7 @@ fun ItemRow(item: StudyItem, state: UiState, vm: MainViewModel, onOpen: (StudyIt
         Column(Modifier.weight(1f).padding(start = 4.dp)) {
             Text(
                 item.title,
-                color = if (done) Palette.Muted else Color.White,
+                color = if (done) Palette.Muted else Palette.Text,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -223,7 +224,7 @@ private fun ItemDetailSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = Color(0xFF1C1638),
+        containerColor = Palette.Sheet,
     ) {
         Column(
             Modifier
@@ -235,7 +236,7 @@ private fun ItemDetailSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             KindChip(item.kind)
-            Text(item.title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(item.title, color = Palette.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             item.course?.let { DetailLine(Icons.Filled.School, it) }
             GlassCard {
                 DetailLine(Icons.Filled.AccessTime, if (item.isAllDay) Fmt.shortDay(item.start) + " · All day" else Fmt.full(item.start))
@@ -249,7 +250,7 @@ private fun ItemDetailSheet(
                 }
             }
             item.notes?.let { notes ->
-                GlassCard { Text(notes, color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp) }
+                GlassCard { Text(notes, color = Palette.Text.copy(alpha = 0.85f), fontSize = 14.sp) }
             }
             if (item.tracksCompletion) {
                 Button(
@@ -278,7 +279,7 @@ private fun DetailLine(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = Palette.Muted, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
-        Text(text, color = Color.White, fontSize = 14.sp)
+        Text(text, color = Palette.Text, fontSize = 14.sp)
     }
 }
 
@@ -292,7 +293,7 @@ fun EmptyState(icon: ImageVector, title: String, message: String) {
     ) {
         Icon(icon, contentDescription = null, tint = Palette.Violet, modifier = Modifier.size(44.dp))
         Spacer(Modifier.height(10.dp))
-        Text(title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+        Text(title, color = Palette.Text, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
         Spacer(Modifier.height(4.dp))
         Text(message, color = Palette.Muted, fontSize = 14.sp)
     }

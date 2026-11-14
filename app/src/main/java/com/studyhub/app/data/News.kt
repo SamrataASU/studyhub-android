@@ -19,36 +19,100 @@ data class NewsArticle(
     val published: Instant?,
 )
 
-/** Finance topics, each from Google News' free RSS search (last 24 hours). */
+/** Finance topics from Google News' free RSS feeds. */
 enum class NewsTopic(val label: String, val query: String) {
-    TOP("Top", "finance"),
-    MARKETS("Markets", "stock market OR Wall Street OR Nasdaq"),
-    ECONOMY("Economy", "economy OR Federal Reserve OR inflation"),
-    CORPORATE("Corporate", "earnings OR merger OR IPO"),
-    INVESTING("Investing", "investing OR personal finance");
+    TOP("Top", "\"stock market\" OR \"Wall Street\" OR economy OR \"Federal Reserve\""),
+    MARKETS("Markets", "\"stock market\" OR \"Wall Street\" OR \"Dow Jones\" OR Nasdaq OR stocks"),
+    ECONOMY("Economy", "\"Federal Reserve\" OR inflation OR \"interest rates\" OR \"US economy\" OR jobs report"),
+    CORPORATE("Corporate", "earnings OR merger OR acquisition OR IPO OR CEO"),
+    INVESTING("Investing", "investing OR \"personal finance\" OR retirement OR \"index funds\"");
 
-    val feedUrl: String
-        get() = "https://news.google.com/rss/search?q=" +
-            URLEncoder.encode("$query when:1d", "UTF-8") + "&hl=en-US&gl=US&ceid=US:en"
+    /** Recent news (last few days). Top also uses Google's edited Business page. */
+    val feedUrls: List<String>
+        get() = if (this == TOP) listOf(BUSINESS_HEADLINES, search("$query when:3d")) else listOf(search("$query when:3d"))
+
+    /** Used if the recent search comes back empty. */
+    val fallbackUrl: String get() = search(query)
+
+    companion object {
+        const val BUSINESS_HEADLINES =
+            "https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGx6TVdZU0FtVnVHZ0pWVXlnQVAB?hl=en-US&gl=US&ceid=US:en"
+
+        fun search(q: String) = "https://news.google.com/rss/search?q=" +
+            URLEncoder.encode(q, "UTF-8") + "&hl=en-US&gl=US&ceid=US:en"
+    }
 }
 
 object News {
+    /** Publishers that mostly post filings, stock-ticker alerts or press releases. */
+    private val blockedSources = listOf(
+        "marketbeat", "stock titan", "stocktitan", "tipranks", "simply wall st", "insider monkey", "gurufocus",
+        "defense world", "etf daily news", "ticker report", "globenewswire", "pr newswire", "prnewswire",
+        "business wire", "businesswire", "accesswire", "newsfile", "sec.gov", "stocks telegraph",
+        "investorsobserver", "marketscreener", "zacks", "the lincolnian", "dailypolitical", "modern readers",
+    )
+
+    /** Headlines that are filings, ticker spam or stock-quote pages, not news. */
+    private val junk = Regex(
+        """\b(8-K|10-K|10-Q|S-1|13F|13G|13D|Form 4|SEC filing|proxy statement)\b|\((NYSE|NASDAQ|NYSEARCA|NYSEAMERICAN|OTC|OTCMKTS|TSX|AMEX|LON|BATS)\s*:|shares (sold|bought|acquired|purchased) by|(acquires|buys|sells|trims|boosts|raises|lowers|cuts|reduces|increases|grows|takes) (a |its )?(new )?(position|stake|holdings)|price target|stock price|stock quote|declares (quarterly |monthly )?dividend""",
+        RegexOption.IGNORE_CASE,
+    )
+
     /** Call off the main thread. */
     fun fetch(topic: NewsTopic): List<NewsArticle> {
-        val conn = URL(topic.feedUrl).openConnection() as HttpURLConnection
+        val all = mutableListOf<NewsArticle>()
+        var lastError: Exception? = null
+        for (url in topic.feedUrls) {
+            try { all += load(url) } catch (e: Exception) { lastError = e }
+        }
+        if (clean(all).isEmpty()) {
+            try { all += load(topic.fallbackUrl) } catch (e: Exception) { lastError = e }
+        }
+        val result = clean(all)
+        if (result.isEmpty() && lastError != null) throw lastError
+        return result
+    }
+
+    private fun load(url: String): List<NewsArticle> {
+        val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 20_000
         conn.readTimeout = 20_000
         conn.useCaches = false
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) StudyHub")
         val xml = try {
             if (conn.responseCode !in 200..299) throw IOException("News is unavailable right now.")
             conn.inputStream.bufferedReader().use { it.readText() }
         } finally {
             conn.disconnect()
         }
-        val seen = HashSet<String>()
         return parse(xml)
-            .filter { seen.add(it.title.lowercase()) }
-            .sortedByDescending { it.published ?: Instant.EPOCH }
+    }
+
+    private fun isQuality(a: NewsArticle): Boolean {
+        val src = a.source.lowercase()
+        if (blockedSources.any { src.contains(it) }) return false
+        if (a.title.length < 25) return false
+        return !junk.containsMatchIn(a.title)
+    }
+
+    /** Newest first, last 4 days, no duplicates, at most 4 stories per publisher. */
+    private fun clean(list: List<NewsArticle>): List<NewsArticle> {
+        val cutoff = Instant.now().minusSeconds(4 * 86_400L)
+        val seen = HashSet<String>()
+        val perSource = HashMap<String, Int>()
+        val out = mutableListOf<NewsArticle>()
+        for (a in list.sortedByDescending { it.published ?: Instant.EPOCH }) {
+            val d = a.published
+            if (d != null && d.isBefore(cutoff)) continue
+            if (!isQuality(a)) continue
+            if (!seen.add(a.title.lowercase().take(60)) || !seen.add("id:" + a.id)) continue
+            val n = perSource[a.source] ?: 0
+            if (n >= 4) continue
+            perSource[a.source] = n + 1
+            out += a
+            if (out.size >= 60) break
+        }
+        return out
     }
 
     private fun parse(xml: String): List<NewsArticle> {
