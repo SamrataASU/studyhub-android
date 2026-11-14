@@ -176,6 +176,15 @@ fun SettingsScreen(state: UiState, vm: MainViewModel, onClose: () -> Unit) {
                 "Your data stays on this phone. The app only downloads your Canvas calendar and public news headlines.",
                 color = Palette.Muted, fontSize = 12.sp,
             )
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 12.dp),
+            ) {
+                Text("Made for Arizona State University students", color = Palette.Muted, fontSize = 12.sp)
+                Spacer(Modifier.height(2.dp))
+                Text("by Samrat Das", color = Palette.Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
