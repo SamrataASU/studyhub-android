@@ -1,0 +1,8 @@
+<resources>
+    <!-- The app's name. Change it here when you've picked the final name. -->
+    <string name="app_name">StudyHub</string>
+    <string name="widget_next_name">Next deadline</string>
+    <string name="widget_next_desc">Countdown to your next deadline. Tap ✓ when it\'s done.</string>
+    <string name="widget_list_name">Upcoming deadlines</string>
+    <string name="widget_list_desc">Your next deadlines. Tap a circle to tick one off.</string>
+</resources>
