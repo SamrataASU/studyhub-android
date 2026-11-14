@@ -18,6 +18,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.studyhub.app.MainActivity
 import com.studyhub.app.R
+import com.studyhub.app.data.CanvasChanges
 import com.studyhub.app.data.StudyItem
 import com.studyhub.app.data.Store
 import com.studyhub.app.widget.Widgets
@@ -26,12 +27,12 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-/** Runs about once an hour in the background: refreshes Canvas, updates widgets, sends reminders. */
+/** Runs about every 15 minutes in the background: refreshes Canvas, updates widgets, sends reminders. */
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val c = applicationContext
         val items = try {
-            Store.refreshCanvas(c)
+            Store.refreshCanvas(c).also { CanvasChanges.process(c, it) }
         } catch (e: Exception) {
             Store.cachedItems(c)
         }
@@ -43,9 +44,9 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 
     companion object {
         fun schedule(c: Context) {
-            val request = PeriodicWorkRequestBuilder<RefreshWorker>(1, TimeUnit.HOURS).build()
+            val request = PeriodicWorkRequestBuilder<RefreshWorker>(15, TimeUnit.MINUTES).build()
             WorkManager.getInstance(c)
-                .enqueueUniquePeriodicWork("studyhub-refresh", ExistingPeriodicWorkPolicy.KEEP, request)
+                .enqueueUniquePeriodicWork("studyhub-refresh", ExistingPeriodicWorkPolicy.UPDATE, request)
         }
     }
 }
@@ -54,6 +55,7 @@ object Notifier {
     private const val DEADLINES = "deadlines"
     private const val NEWS = "news"
     private const val FOCUS = "focus"
+    private const val CANVAS = "canvas"
 
     fun createChannels(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java) ?: return
@@ -65,6 +67,9 @@ object Notifier {
         )
         nm.createNotificationChannel(
             NotificationChannel(FOCUS, "Focus timer", NotificationManager.IMPORTANCE_HIGH)
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CANVAS, "New assignments and date changes", NotificationManager.IMPORTANCE_HIGH)
         )
     }
 
@@ -93,6 +98,8 @@ object Notifier {
     }
 
     fun postFocus(c: Context, title: String, body: String) = post(c, 7700, FOCUS, title, body)
+
+    fun postChange(c: Context, id: Int, title: String, body: String) = post(c, id, CANVAS, title, body)
 
     /** About 24 hours and 3 hours before each unfinished deadline. */
     fun checkDeadlines(c: Context, items: List<StudyItem>) {

@@ -85,6 +85,7 @@ fun TodayScreen(state: UiState, vm: MainViewModel, onOpen: (StudyItem) -> Unit, 
                     val next = state.upcoming.firstOrNull()
                     if (next != null) NextUpCard(next) { vm.toggleDone(next) } else AllClearCard()
                 }
+                if (state.changes.isNotEmpty()) item { CanvasUpdatesCard(state, vm::clearChanges) }
                 item { StatsRow(state, dueSoon) }
                 item { FocusCard(vm.focus) }
                 item { SectionHeader("Today", todayItems.size) }
@@ -279,6 +280,27 @@ private fun QuoteCard() {
             Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Palette.Amber)
             Spacer(Modifier.width(12.dp))
             Text(quote, color = Color.White, fontSize = 15.sp, fontStyle = FontStyle.Italic, fontFamily = FontFamily.Serif)
+        }
+    }
+}
+
+/** "Updates from Canvas": new assignments/exams and moved due dates from the last 7 days. */
+@Composable
+private fun CanvasUpdatesCard(state: UiState, onClear: () -> Unit) {
+    GlassCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🔔  Updates from Canvas", color = Palette.Amber, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = onClear) { Text("Clear", color = Palette.Violet, fontSize = 13.sp) }
+        }
+        state.changes.take(5).forEach { change ->
+            Row(Modifier.padding(vertical = 4.dp)) {
+                Text(change.emoji, fontSize = 16.sp)
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(change.headline, color = Palette.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(change.detail, color = Color.White, fontSize = 14.sp)
+                }
+            }
         }
     }
 }

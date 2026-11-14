@@ -126,6 +126,11 @@ fun SettingsScreen(state: UiState, vm: MainViewModel, onClose: () -> Unit) {
                     vm.setReminders(it)
                 }
                 HorizontalDivider(color = Palette.Stroke, modifier = Modifier.padding(vertical = 8.dp))
+                ToggleRow("New assignments and date changes", "Checked about every 15 minutes, even when the app is closed", state.changeAlerts) {
+                    if (it) askNotifications()
+                    vm.setChangeAlerts(it)
+                }
+                HorizontalDivider(color = Palette.Stroke, modifier = Modifier.padding(vertical = 8.dp))
                 ToggleRow("Daily finance news", "A morning reminder at about 8 AM", state.dailyNews) {
                     if (it) askNotifications()
                     vm.setDailyNews(it)

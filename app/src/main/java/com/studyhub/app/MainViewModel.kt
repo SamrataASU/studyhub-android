@@ -3,6 +3,8 @@ package com.studyhub.app
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.studyhub.app.data.CanvasChange
+import com.studyhub.app.data.CanvasChanges
 import com.studyhub.app.data.StudyItem
 import com.studyhub.app.focus.FocusController
 import com.studyhub.app.data.Store
@@ -29,6 +31,8 @@ data class UiState(
     val lastSynced: Instant? = null,
     val reminders: Boolean = true,
     val dailyNews: Boolean = true,
+    val changes: List<CanvasChange> = emptyList(),
+    val changeAlerts: Boolean = true,
 ) {
     val deadlines: List<StudyItem> get() = items.filter { it.tracksCompletion }
 
@@ -73,6 +77,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             onboarded = Store.onboarded(app),
             reminders = Store.reminders(app),
             dailyNews = Store.dailyNews(app),
+            changes = CanvasChanges.recent(app),
+            changeAlerts = CanvasChanges.alertsEnabled(app),
         )
     )
     val state: StateFlow<UiState> = _state
@@ -83,8 +89,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(refreshing = true, done = Store.done(ctx)) }
         viewModelScope.launch {
             try {
-                val items = withContext(Dispatchers.IO) { Store.refreshCanvas(ctx) }
-                _state.update { it.copy(items = inRange(items), error = null) }
+                val items = withContext(Dispatchers.IO) {
+                    val fresh = Store.refreshCanvas(ctx)
+                    CanvasChanges.process(ctx, fresh)
+                    fresh
+                }
+                _state.update { it.copy(items = inRange(items), error = null, changes = CanvasChanges.recent(ctx)) }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -117,8 +127,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setFeed(feed: String) {
         Store.setFeed(ctx, feed)
-        _state.update { it.copy(feed = feed.trim(), error = null) }
+        CanvasChanges.reset(ctx)
+        _state.update { it.copy(feed = feed.trim(), error = null, changes = emptyList()) }
         refresh()
+    }
+
+    fun clearChanges() {
+        CanvasChanges.clearLog(ctx)
+        _state.update { it.copy(changes = emptyList()) }
+    }
+
+    fun setChangeAlerts(on: Boolean) {
+        CanvasChanges.setAlertsEnabled(ctx, on)
+        _state.update { it.copy(changeAlerts = on) }
     }
 
     fun setReminders(on: Boolean) {
