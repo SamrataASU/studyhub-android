@@ -85,6 +85,7 @@ private val tabs = listOf(
 @Composable
 fun StudyHubApp(vm: MainViewModel) {
     val state by vm.state.collectAsState()
+    val focusState by vm.focus.state.collectAsState()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var page by remember { mutableStateOf<WebPage?>(null) }
@@ -102,6 +103,7 @@ fun StudyHubApp(vm: MainViewModel) {
         AppBackground {
             when {
                 !state.onboarded -> OnboardingScreen(onDone = vm::finishOnboarding)
+                focusState.active -> FocusScreen(vm.focus, focusState)
                 page != null -> {
                     BackHandler { page = null }
                     WebPageScreen(page!!, onClose = { page = null })

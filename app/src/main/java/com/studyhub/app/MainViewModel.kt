@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.studyhub.app.data.StudyItem
+import com.studyhub.app.focus.FocusController
 import com.studyhub.app.data.Store
 import com.studyhub.app.data.Week
 import com.studyhub.app.widget.Widgets
@@ -59,6 +60,9 @@ data class UiState(
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx: Application get() = getApplication()
+
+    /** The focus timer (kept here so it survives rotating the phone). */
+    val focus = FocusController(app)
 
     private val _state = MutableStateFlow(
         UiState(

@@ -86,7 +86,7 @@ fun TodayScreen(state: UiState, vm: MainViewModel, onOpen: (StudyItem) -> Unit, 
                     if (next != null) NextUpCard(next) { vm.toggleDone(next) } else AllClearCard()
                 }
                 item { StatsRow(state, dueSoon) }
-                item { FocusTimerCard() }
+                item { FocusCard(vm.focus) }
                 item { SectionHeader("Today", todayItems.size) }
                 if (todayItems.isEmpty()) item { Muted("Nothing scheduled today.") }
                 items(todayItems, key = { "t-" + it.id }) { ItemRow(it, state, vm, onOpen) }
@@ -252,81 +252,6 @@ private fun StatTile(value: String, label: String, color: Color) {
     GlassCard(modifier = Modifier.width(92.dp).height(90.dp), padding = 14.dp) {
         Text(value, color = color, fontSize = 28.sp, fontWeight = FontWeight.Black)
         Text(label, color = Palette.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 2)
-    }
-}
-
-@Composable
-private fun FocusTimerCard() {
-    val context = LocalContext.current
-    val todayKey = LocalDate.now().toString()
-    var minutes by rememberSaveable { mutableIntStateOf(25) }
-    var endAt by rememberSaveable { mutableStateOf<Long?>(null) }
-    var pausedLeft by rememberSaveable { mutableStateOf<Long?>(null) }
-    var count by remember { mutableIntStateOf(Store.focusCountToday(context, todayKey)) }
-    var now by remember { mutableStateOf(System.currentTimeMillis()) }
-
-    LaunchedEffect(endAt) {
-        while (endAt != null) {
-            now = System.currentTimeMillis()
-            val end = endAt ?: break
-            if (now >= end) {
-                endAt = null
-                pausedLeft = null
-                Store.addFocusSession(context, todayKey)
-                count = Store.focusCountToday(context, todayKey)
-                break
-            }
-            delay(1000)
-        }
-    }
-
-    val total = minutes * 60_000L
-    val left = endAt?.let { maxOf(0L, it - now) } ?: pausedLeft ?: total
-    val secs = (left + 999) / 1000
-
-    GlassCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(contentAlignment = Alignment.Center) {
-                ProgressRing(1f - left.toFloat() / total, 72.dp, 7.dp, listOf(Palette.Mint, Palette.Sky))
-                Text(String.format(Locale.US, "%d:%02d", secs / 60, secs % 60), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Focus session", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    if (count == 0) "Start a $minutes-minute sprint" else "$count session${if (count == 1) "" else "s"} done today 🔥",
-                    color = Palette.Muted, fontSize = 12.sp,
-                )
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = {
-                            val end = endAt
-                            if (end != null) {
-                                pausedLeft = maxOf(0L, end - System.currentTimeMillis())
-                                endAt = null
-                            } else {
-                                endAt = System.currentTimeMillis() + (pausedLeft ?: total)
-                                pausedLeft = null
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Palette.Violet),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                    ) { Text(if (endAt != null) "Pause" else if (pausedLeft != null) "Resume" else "Start", fontSize = 13.sp) }
-                    if (endAt != null || pausedLeft != null) {
-                        OutlinedButton(
-                            onClick = { endAt = null; pausedLeft = null },
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                        ) { Text("Reset", fontSize = 13.sp) }
-                    } else {
-                        OutlinedButton(
-                            onClick = { minutes = when (minutes) { 15 -> 25; 25 -> 45; 45 -> 50; else -> 15 } },
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-                        ) { Text("$minutes min", fontSize = 13.sp) }
-                    }
-                }
-            }
-        }
     }
 }
 

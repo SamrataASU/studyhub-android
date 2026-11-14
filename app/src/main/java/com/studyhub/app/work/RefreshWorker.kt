@@ -53,6 +53,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
 object Notifier {
     private const val DEADLINES = "deadlines"
     private const val NEWS = "news"
+    private const val FOCUS = "focus"
 
     fun createChannels(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java) ?: return
@@ -61,6 +62,9 @@ object Notifier {
         )
         nm.createNotificationChannel(
             NotificationChannel(NEWS, "Daily finance news", NotificationManager.IMPORTANCE_DEFAULT)
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(FOCUS, "Focus timer", NotificationManager.IMPORTANCE_HIGH)
         )
     }
 
@@ -87,6 +91,8 @@ object Notifier {
             // Notifications not allowed.
         }
     }
+
+    fun postFocus(c: Context, title: String, body: String) = post(c, 7700, FOCUS, title, body)
 
     /** About 24 hours and 3 hours before each unfinished deadline. */
     fun checkDeadlines(c: Context, items: List<StudyItem>) {
