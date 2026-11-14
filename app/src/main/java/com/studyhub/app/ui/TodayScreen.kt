@@ -3,6 +3,7 @@
 package com.studyhub.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,7 +84,7 @@ fun TodayScreen(state: UiState, vm: MainViewModel, onOpen: (StudyItem) -> Unit, 
                 if (state.feed.isBlank()) item { SetupCard(vm) }
                 item {
                     val next = state.upcoming.firstOrNull()
-                    if (next != null) NextUpCard(next) { vm.toggleDone(next) } else AllClearCard()
+                    if (next != null) NextUpCard(next, onOpen = { onOpen(next) }) { vm.toggleDone(next) } else AllClearCard()
                 }
                 if (state.changes.isNotEmpty()) item { CanvasUpdatesCard(state, vm::clearChanges) }
                 item { StatsRow(state, dueSoon) }
@@ -163,7 +164,7 @@ private fun SetupCard(vm: MainViewModel) {
 }
 
 @Composable
-private fun NextUpCard(item: StudyItem, onDone: () -> Unit) {
+private fun NextUpCard(item: StudyItem, onOpen: () -> Unit, onDone: () -> Unit) {
     val now = rememberNow(30_000)
     val shape = RoundedCornerShape(26.dp)
     Column(
@@ -171,6 +172,7 @@ private fun NextUpCard(item: StudyItem, onDone: () -> Unit) {
             .fillMaxWidth()
             .shadow(18.dp, shape, ambientColor = Palette.Violet, spotColor = Palette.Violet)
             .clip(shape)
+            .clickable(onClick = onOpen)
             .background(Brush.linearGradient(listOf(item.kind.color.copy(alpha = 0.95f), Palette.Violet)))
             .padding(20.dp),
     ) {
