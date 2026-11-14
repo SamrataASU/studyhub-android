@@ -167,3 +167,95 @@ object News {
     private fun parseDate(s: String): Instant? =
         runCatching { ZonedDateTime.parse(s, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant() }.getOrNull()
 }
+
+/**
+ * Finds a picture for the top story. Google News feeds have no images,
+ * so this looks the headline up in Bing News, which includes thumbnails.
+ */
+object NewsImages {
+    private val urls = HashMap<String, String>()
+
+    /** Call off the main thread. Returns the picture's web address, or null. */
+    fun imageUrl(article: NewsArticle): String? {
+        urls[article.id]?.let { return it }
+        return try {
+            val url = "https://www.bing.com/news/search?q=" + URLEncoder.encode(article.title, "UTF-8") + "&format=rss"
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.connectTimeout = 12_000
+            conn.readTimeout = 12_000
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) StudyHub")
+            val xml = try {
+                if (conn.responseCode !in 200..299) return null
+                conn.inputStream.bufferedReader().use { it.readText() }
+            } finally {
+                conn.disconnect()
+            }
+            val wanted = words(article.title)
+            for ((title, image) in parse(xml)) {
+                // Only use the picture if it's clearly the same story.
+                val overlap = wanted.intersect(words(title)).size
+                if (wanted.isEmpty() || overlap.toDouble() / wanted.size < 0.4) continue
+                var raw = image.replace("http://", "https://")
+                if (raw.contains("bing.com/th")) raw += "&w=700&h=394&c=7"
+                urls[article.id] = raw
+                return raw
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Downloads the picture (call off the main thread). */
+    fun download(url: String): android.graphics.Bitmap? = try {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 12_000
+        conn.readTimeout = 12_000
+        try {
+            conn.inputStream.use { android.graphics.BitmapFactory.decodeStream(it) }
+        } finally {
+            conn.disconnect()
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun words(s: String): Set<String> =
+        s.lowercase().split(Regex("[^\\p{L}\\p{N}]+")).filter { it.length > 3 }.toSet()
+
+    private fun parse(xml: String): List<Pair<String, String>> {
+        val out = mutableListOf<Pair<String, String>>()
+        val parser = Xml.newPullParser()
+        parser.setInput(StringReader(xml))
+        var inItem = false
+        var text = StringBuilder()
+        var title = ""
+        var image = ""
+        var event = parser.eventType
+        while (event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.START_TAG -> {
+                    if (parser.name == "item") { inItem = true; title = ""; image = "" }
+                    text = StringBuilder()
+                }
+                XmlPullParser.TEXT -> text.append(parser.text)
+                XmlPullParser.END_TAG -> {
+                    if (inItem) {
+                        val v = text.toString().trim()
+                        when (parser.name) {
+                            "title" -> title = v
+                            "News:Image", "Image" -> if (image.isEmpty()) image = v
+                            "item" -> {
+                                inItem = false
+                                if (image.isNotEmpty()) out += title to image
+                            }
+                        }
+                    }
+                    text = StringBuilder()
+                }
+            }
+            event = parser.next()
+        }
+        return out
+    }
+}

@@ -2,6 +2,7 @@
 
 package com.studyhub.app.ui
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -272,16 +273,62 @@ private val quotes = listOf(
     "Make today the day the list gets shorter.",
     "Your effort compounds, just like interest.",
     "Hard now, easy later. Easy now, hard later.",
+    "Finish one assignment and the rest feel lighter.",
+    "The best time to start was yesterday. The next best is right now.",
+    "A submitted draft beats a perfect idea.",
+    "Your GPA is built on ordinary Tuesdays.",
+    "Close the tabs. Open the assignment.",
+    "Turn \"I'll do it later\" into \"I already did it.\"",
+    "Momentum starts with the first sentence.",
+    "You've handled every deadline so far. This one is no different.",
+    "Invest in yourself today. The returns are huge.",
+    "Do the hard part first and the day gets easier.",
+    "Twenty-five focused minutes. That's all it takes to begin.",
+    "Consistency beats cramming every single time.",
+    "The weekend tastes better when the work is done.",
+    "Treat your time like capital. Spend it on what pays off.",
+    "Show up for yourself the way you would for a friend.",
+    "Small wins today, big options tomorrow.",
+    "Your future career is reading this over your shoulder.",
+    "Check one box. Then check the next.",
+    "Effort today is a dividend you collect all semester.",
+    "You're closer to done than you think.",
+    "Busy is easy. Finished is rare. Be rare.",
+    "A little progress every day adds up to big results.",
+    "Be the student who submits early.",
+    "Focus now, freedom later.",
+    "Make the deadline chase you, not the other way around.",
+    "Great things are built one assignment at a time.",
+    "Today's work is tomorrow's confidence.",
 )
+
+/** The motivational line on Today. It changes every time the app opens, and every 10 minutes. */
+object QuoteRotation {
+    var index by mutableIntStateOf(quotes.indices.random())
+        private set
+
+    fun next() {
+        var n = (0 until quotes.size - 1).random()
+        if (n >= index) n++  // never repeat the same line twice in a row
+        index = n
+    }
+}
 
 @Composable
 private fun QuoteCard() {
-    val quote = quotes[LocalDate.now().dayOfYear % quotes.size]
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(10 * 60_000L)
+            QuoteRotation.next()
+        }
+    }
     GlassCard {
         Row {
             Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Palette.Amber)
             Spacer(Modifier.width(12.dp))
-            Text(quote, color = Palette.Text, fontSize = 15.sp, fontStyle = FontStyle.Italic, fontFamily = FontFamily.Serif)
+            Crossfade(targetState = quotes[QuoteRotation.index], label = "quote") { quote ->
+                Text(quote, color = Palette.Text, fontSize = 15.sp, fontStyle = FontStyle.Italic, fontFamily = FontFamily.Serif)
+            }
         }
     }
 }

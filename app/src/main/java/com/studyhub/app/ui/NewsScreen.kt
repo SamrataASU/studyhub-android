@@ -2,6 +2,11 @@
 
 package com.studyhub.app.ui
 
+import com.studyhub.app.data.NewsImages
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.runtime.produceState
+import androidx.compose.foundation.Image
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.webkit.WebResourceRequest
@@ -183,6 +188,11 @@ fun NewsScreen(onOpen: (WebPage) -> Unit, onSettings: () -> Unit) {
 
 @Composable
 private fun LeadStory(article: NewsArticle, onClick: () -> Unit) {
+    val picture by produceState<android.graphics.Bitmap?>(null, article.id) {
+        value = withContext(Dispatchers.IO) {
+            NewsImages.imageUrl(article)?.let { NewsImages.download(it) }
+        }
+    }
     Column(
         Modifier
             .fillMaxWidth()
@@ -191,6 +201,18 @@ private fun LeadStory(article: NewsArticle, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(20.dp),
     ) {
+        picture?.let { bmp ->
+            Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         Row {
             Text(article.source.uppercase(), color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.weight(1f))
             Text(Fmt.ago(article.published), color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)

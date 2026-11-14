@@ -6,6 +6,7 @@ import androidx.activity.SystemBarStyle
 import androidx.compose.runtime.LaunchedEffect
 import com.studyhub.app.data.Store
 import com.studyhub.app.ui.Palette
+import com.studyhub.app.ui.QuoteRotation
 import com.studyhub.app.ui.ThemeChoice
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        QuoteRotation.next()
         if (vm.state.value.onboarded) vm.refresh()
     }
 }
